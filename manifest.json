@@ -1,0 +1,24 @@
+{
+  "name": "RutaX - Colombia Movilidad OS",
+  "short_name": "RutaX",
+  "description": "Monitoreo de incidentes de tránsito en tiempo real en Colombia",
+  "start_url": "/transicontrol/app/views/home/index.php",
+  "display": "standalone",
+  "theme_color": "#0F4C81",
+  "background_color": "#0b1220",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "../../images/logo.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "../../images/favico.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

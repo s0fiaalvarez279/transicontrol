@@ -1,10 +1,9 @@
 <?php
 // config/config.php
-define('BASE_URL', '/transicontrol');  // Ajusta según tu carpeta
-define('APP_NAME', 'TransiControl');
-define('DEBUG', true);
 
-// Configuración de sesión
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-session_start();
+date_default_timezone_set('America/Bogota');
+
+define('APP_NAME', 'TransiControl');
+define('APP_URL', 'http://localhost/transicontrol');  // Cambia según tu entorno
+define('SESSION_NAME', 'transicontrol_session');
+session_name(SESSION_NAME);

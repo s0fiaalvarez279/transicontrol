@@ -1,23 +1,14 @@
 <?php
 /**
- * RutaX · Medellín Movilidata OS
- * 
- * Sistema de monitoreo de incidentes de tránsito en tiempo real.
- * 
- * Este archivo principal muestra el mapa, consume varias APIs externas,
- * maneja un stream de incidentes (SSE), calcula rutas seguras y muestra
- * estadísticas visuales. Incluye un heatmap de incidentes para identificar
- * zonas de riesgo vial.
- * 
- * @version 3.3 - Heatmap de incidentes para riesgos viales
+ * RutaX · Colombia Movilidad OS
+ * @version 6.0 - Heatmap rojo + ruta verde + PWA completa
  */
-
-$APP_NAME = 'RutaX · Medellín Movilidata OS';
+$APP_NAME = 'RutaX · Colombia Movilidad OS';
 
 // -------------------------------------------------------------------
-// 1. CARGAR INCIDENTES DESDE ARCHIVO GEOJSON (si existe)
+// Cargar incidentes desde GeoJSON o generar datos de ejemplo
 // -------------------------------------------------------------------
-$geojsonFile = __DIR__ . '/data/total_incidentes_transito.geojson';
+$geojsonFile = __DIR__ . '/data/total_incidentes_colombia.geojson';
 $geoJsonData = null;
 $totalIncidents = 0;
 $criticalCount = 0;
@@ -39,30 +30,57 @@ if (file_exists($geojsonFile)) {
     }
 }
 
-// -------------------------------------------------------------------
-// 2. SI NO HAY ARCHIVO, GENERAMOS INCIDENTES DE EJEMPLO
-// -------------------------------------------------------------------
+// Generar incidentes de ejemplo si no hay archivo
 if (!$geoJsonData) {
-    $features = [];
-    $comunas = ['Popular', 'Santa Cruz', 'Manrique', 'Aranjuez', 'Castilla', 'Doce de Octubre', 'Robledo', 'Villa Hermosa', 'Buenos Aires', 'La Candelaria', 'Laureles', 'El Poblado'];
-    $barrios = ['Belén', 'La América', 'San Javier', 'El Poblado', 'Envigado', 'Itagüí', 'Sabaneta', 'La Floresta', 'Estadio', 'Carlos E. Restrepo'];
+    $ciudades = [
+        ['nombre' => 'Bogotá', 'lat' => 4.7109, 'lng' => -74.0721, 'comuna' => 'Cundinamarca'],
+        ['nombre' => 'Medellín', 'lat' => 6.2476, 'lng' => -75.5658, 'comuna' => 'Antioquia'],
+        ['nombre' => 'Cali', 'lat' => 3.4516, 'lng' => -76.5320, 'comuna' => 'Valle del Cauca'],
+        ['nombre' => 'Barranquilla', 'lat' => 10.9639, 'lng' => -74.7964, 'comuna' => 'Atlántico'],
+        ['nombre' => 'Cartagena', 'lat' => 10.3910, 'lng' => -75.4794, 'comuna' => 'Bolívar'],
+        ['nombre' => 'Bucaramanga', 'lat' => 7.1193, 'lng' => -73.1227, 'comuna' => 'Santander'],
+        ['nombre' => 'Pereira', 'lat' => 4.8087, 'lng' => -75.6906, 'comuna' => 'Risaralda'],
+        ['nombre' => 'Santa Marta', 'lat' => 11.2408, 'lng' => -74.1990, 'comuna' => 'Magdalena'],
+        ['nombre' => 'Ibagué', 'lat' => 4.4389, 'lng' => -75.2322, 'comuna' => 'Tolima'],
+        ['nombre' => 'Manizales', 'lat' => 5.0675, 'lng' => -75.5193, 'comuna' => 'Caldas'],
+        ['nombre' => 'Neiva', 'lat' => 2.9275, 'lng' => -75.2819, 'comuna' => 'Huila'],
+        ['nombre' => 'Villavicencio', 'lat' => 4.1429, 'lng' => -73.6266, 'comuna' => 'Meta'],
+        ['nombre' => 'Cúcuta', 'lat' => 7.9019, 'lng' => -72.4965, 'comuna' => 'Norte de Santander'],
+        ['nombre' => 'Pasto', 'lat' => 1.2136, 'lng' => -77.2811, 'comuna' => 'Nariño'],
+        ['nombre' => 'Montería', 'lat' => 8.7490, 'lng' => -75.8838, 'comuna' => 'Córdoba'],
+        ['nombre' => 'Sincelejo', 'lat' => 9.3047, 'lng' => -75.3978, 'comuna' => 'Sucre'],
+        ['nombre' => 'Riohacha', 'lat' => 11.5444, 'lng' => -72.9078, 'comuna' => 'La Guajira'],
+        ['nombre' => 'Quibdó', 'lat' => 5.6918, 'lng' => -76.6586, 'comuna' => 'Chocó'],
+        ['nombre' => 'Tunja', 'lat' => 5.5325, 'lng' => -73.3675, 'comuna' => 'Boyacá'],
+        ['nombre' => 'Armenia', 'lat' => 4.5339, 'lng' => -75.6811, 'comuna' => 'Quindío']
+    ];
     $tipos = ['Choque', 'Atropello', 'Caída de moto', 'Daños materiales', 'Colisión múltiple', 'Obstrucción'];
     $gravedades = ['Leve', 'Grave', 'Mortal', 'Sin lesionados', 'Hospitalización'];
-    
-    for ($i = 0; $i < 20; $i++) {
-        $lng = -75.59 + (mt_rand(-80, 80) / 1000);
-        $lat = 6.24 + (mt_rand(-60, 60) / 1000);
+    $features = [];
+    $numIncidents = rand(40, 60);
+    for ($i = 0; $i < $numIncidents; $i++) {
+        if (rand(1, 100) <= 70) {
+            $city = $ciudades[array_rand($ciudades)];
+            $lat = $city['lat'] + (mt_rand(-50, 50) / 1000);
+            $lng = $city['lng'] + (mt_rand(-50, 50) / 1000);
+            $comuna = $city['comuna'];
+            $barrio = $city['nombre'];
+        } else {
+            $lat = mt_rand(-400, 1250) / 100;
+            $lng = mt_rand(-7900, -6700) / 100;
+            $comuna = 'Zona rural';
+            $barrio = 'Carretera nacional';
+        }
         $tipo = $tipos[array_rand($tipos)];
         $gravedad = $gravedades[array_rand($gravedades)];
         if ($gravedad === 'Mortal') $criticalCount++;
-        
         $features[] = [
             'type' => 'Feature',
             'geometry' => ['type' => 'Point', 'coordinates' => [$lng, $lat]],
             'properties' => [
                 'id' => $i, 'clase' => $tipo, 'tipo' => $tipo, 'gravedad' => $gravedad,
-                'direccion' => 'Cra ' . rand(1,100) . ' #' . rand(1,50) . '-' . rand(1,99),
-                'barrio' => $barrios[array_rand($barrios)], 'comuna' => $comunas[array_rand($comunas)],
+                'direccion' => 'Vía ' . $barrio . ' km ' . rand(1, 50),
+                'barrio' => $barrio, 'comuna' => $comuna,
                 'fecha' => date('Y-m-d'), 'hora' => date('H:i:s')
             ]
         ];
@@ -71,15 +89,10 @@ if (!$geoJsonData) {
     $geoJsonData = ['type' => 'FeatureCollection', 'features' => $features];
 }
 
-// -------------------------------------------------------------------
-// 3. ESTADÍSTICAS INICIALES
-// -------------------------------------------------------------------
 $baseCongestion = min(85, 20 + floor($totalIncidents / 2.5));
 $avgSpeed = max(12, 45 - floor($baseCongestion / 2.2));
 
-// -------------------------------------------------------------------
-// 4. RUTAS DE IMÁGENES
-// -------------------------------------------------------------------
+// Rutas de imágenes (ajusta según tu estructura)
 $logoPath = '../../images/logo.png';
 $faviconPath = '../../images/favico.png';
 ?>
@@ -90,17 +103,20 @@ $faviconPath = '../../images/favico.png';
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title><?php echo htmlspecialchars($APP_NAME); ?></title>
     
+    <!-- PWA Meta -->
+    <link rel="manifest" href="/transicontrol/manifest.json">
+    <meta name="theme-color" content="#0F4C81">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
     <link rel="icon" type="image/png" sizes="32x32" href="<?php echo $faviconPath; ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?php echo $faviconPath; ?>">
     <link rel="apple-touch-icon" sizes="180x180" href="<?php echo $faviconPath; ?>">
-    <link rel="shortcut icon" type="image/png" href="<?php echo $faviconPath; ?>">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -124,36 +140,15 @@ $faviconPath = '../../images/favico.png';
         .topbar{position:absolute;inset:1rem 1rem auto 1rem;z-index:20;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
         .pill{pointer-events:auto;display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1rem;border-radius:.85rem;
           background:rgba(17,26,46,.88);border:1px solid var(--border);backdrop-filter:blur(10px);
-          color:var(--fg);font-weight:600;font-size:.9rem;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:.2s}
+          color:var(--fg);font-weight:600;font-size:.9rem;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:.2s;text-decoration:none}
         .pill:hover{background:rgba(17,26,46,1)}
-        @media (max-width: 640px){
-            .pill span{display:none}
-            .app-title-text{display:none}
-        }
-        .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(16,185,129,.6);animation:pulse 1.8s infinite}
+        @media (max-width: 640px){.pill span{display:none}.app-title-text{display:none}}
+        .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 1.8s infinite}
         @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 10px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
         
-        .circular-logo {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--primary);
-            border: 2px solid var(--accent);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        .circular-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .sidebar-logo .circular-logo {
-            width: 44px;
-            height: 44px;
-        }
+        .circular-logo{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--primary);border:2px solid var(--accent);overflow:hidden}
+        .circular-logo img{width:100%;height:100%;object-fit:cover}
+        .sidebar-logo .circular-logo{width:44px;height:44px}
         
         .panel{position:absolute;top:0;height:100%;background:rgba(17,26,46,.96);backdrop-filter:blur(14px);
           border-color:var(--border);box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:30;
@@ -167,9 +162,6 @@ $faviconPath = '../../images/favico.png';
         .icon-btn{background:transparent;border:none;color:var(--fg);cursor:pointer;padding:.4rem;border-radius:.5rem}
         .icon-btn:hover{background:rgba(255,255,255,.08)}
         .scroll{overflow-y:auto;flex:1}
-        .scroll::-webkit-scrollbar{width:6px}
-        .scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-        
         .stats{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;padding:0 1rem}
         .stat{background:rgba(11,18,32,.65);border:1px solid var(--border);border-radius:.85rem;padding:.75rem}
         .stat .label{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);font-weight:500}
@@ -184,12 +176,13 @@ $faviconPath = '../../images/favico.png';
         nav.menu a:hover{background:rgba(255,255,255,.06);color:#fff}
         .panel footer{padding:.85rem 1rem;border-top:1px solid var(--border);font-size:.7rem;color:var(--muted)}
         
-        .weather-card, .air-card, .sun-card, .route-card{background:linear-gradient(135deg,rgba(15,76,129,0.2),rgba(0,0,0,0.2));border:1px solid var(--border);border-radius:1rem;margin:1rem 1rem 0 1rem;padding:.75rem;backdrop-filter:blur(4px)}
+        .weather-card, .air-card, .sun-card, .route-card, .forecast-card{background:linear-gradient(135deg,rgba(15,76,129,0.2),rgba(0,0,0,0.2));border:1px solid var(--border);border-radius:1rem;margin:1rem 1rem 0 1rem;padding:.75rem;backdrop-filter:blur(4px)}
         .weather-temp{font-size:2rem;font-weight:800;line-height:1}
         .weather-desc{font-size:.75rem;text-transform:capitalize}
         .weather-update{font-size:.6rem;color:var(--muted);text-align:right;margin-top:.5rem}
         .air-quality-index{font-size:1.8rem;font-weight:800;line-height:1}
         .sun-icon{font-size:1.8rem}
+        .forecast-item{display:flex;justify-content:space-between;font-size:.7rem;margin-bottom:.3rem}
         
         .alert-btn{position:relative;overflow:hidden;transition:all .3s ease}
         .alert-btn:hover{transform:translateY(-4px);box-shadow:0 0 20px rgba(239,68,68,0.4)}
@@ -199,19 +192,17 @@ $faviconPath = '../../images/favico.png';
         .enhanced-popup .leaflet-popup-content-wrapper{background:rgba(11,18,32,0.95);backdrop-filter:blur(8px);border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.5);padding:0}
         .enhanced-popup .leaflet-popup-content{margin:0;width:280px!important}
         .custom-popup{color:#fff}
-        .popup-header{display:flex;align-items:center;gap:8px;padding:12px 16px;font-weight:800;font-size:.85rem;border-bottom:1px solid rgba(255,255,255,0.1)}
-        .popup-content{padding:12px 16px;display:flex;flex-direction:column;gap:6px}
+        .popup-header{display:flex;align-items:center;gap:8px;padding:12px 16px;font-weight:800;border-bottom:1px solid rgba(255,255,255,0.1)}
+        .popup-content{padding:12px 16px}
         .popup-row{display:flex;justify-content:space-between;font-size:.78rem;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:4px}
-        .popup-label{font-weight:600;color:var(--muted)}
-        .popup-value{text-align:right;font-weight:500}
-        .gravedad-destacada{font-weight:800;text-transform:uppercase;padding:2px 6px;border-radius:10px;font-size:.7rem}
+        .gravedad-destacada{font-weight:800;text-transform:uppercase;padding:2px 6px;border-radius:10px}
         .popup-mortal .popup-header{background:#b91c1c}
         .popup-grave .popup-header{background:#ea580c}
         .popup-leve .popup-header{background:#1e3a8a}
         
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;transition:.2s}
         .modal-overlay.active{visibility:visible;opacity:1}
-        .modal-container{background:rgba(17,26,46,0.98);backdrop-filter:blur(12px);border-radius:1.5rem;border:1px solid var(--border);width:90%;max-width:650px;max-height:85vh;display:flex;flex-direction:column}
+        .modal-container{background:rgba(17,26,46,0.98);border-radius:1.5rem;border:1px solid var(--border);width:90%;max-width:650px;max-height:85vh;display:flex;flex-direction:column}
         .modal-header{display:flex;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border)}
         .incident-list{flex:1;overflow-y:auto;padding:1rem}
         .incident-card{background:rgba(11,18,32,0.5);border:1px solid var(--border);border-radius:1rem;padding:.8rem 1rem;margin-bottom:.6rem}
@@ -219,83 +210,25 @@ $faviconPath = '../../images/favico.png';
         .gravedad-mortal{background:rgba(239,68,68,0.15);color:#ff6b6b}
         .gravedad-grave{background:rgba(249,115,22,0.15);color:#ffb347}
         .gravedad-leve{background:rgba(234,179,8,0.15);color:#fde047}
-        .btn-view-map{background:var(--primary);color:white;padding:.35rem .85rem;border-radius:.5rem;font-size:.75rem;cursor:pointer;margin-top:.5rem;display:inline-block}
-        .btn-view-map:hover{filter:brightness(1.2)}
-        
+        .btn-view-map{background:var(--primary);color:white;padding:.35rem .85rem;border-radius:.5rem;font-size:.75rem;cursor:pointer;display:inline-block}
         .sidebar-logo{display:flex;align-items:center;gap:.5rem}
         
-        .bar-stats-section {
-            margin: 1rem;
-            background: rgba(11,18,32,0.4);
-            border-radius: 1rem;
-            border: 1px solid var(--border);
-            padding: 0.8rem;
-        }
-        .bar-stats-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--accent);
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .bar-item {
-            margin-bottom: 0.7rem;
-        }
-        .bar-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-bottom: 0.2rem;
-        }
-        .bar-bg {
-            background: rgba(255,255,255,0.08);
-            border-radius: 20px;
-            overflow: hidden;
-            height: 8px;
-            width: 100%;
-        }
-        .bar-fill {
-            height: 100%;
-            width: 0%;
-            border-radius: 20px;
-            transition: width 0.6s cubic-bezier(0.22, 0.97, 0.36, 1.02);
-        }
-        .fill-leve { background: linear-gradient(90deg, #10b981, #34d399); }
-        .fill-grave { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-        .fill-mortal { background: linear-gradient(90deg, #ef4444, #f97316); }
-        .fill-comuna { background: linear-gradient(90deg, #0F4C81, #3b82f6); }
-        .comuna-rank {
-            font-size: 0.7rem;
-            font-family: monospace;
-            color: var(--accent);
-        }
-        .bar-hint {
-            font-size: 0.6rem;
-            color: var(--muted);
-            text-align: right;
-            margin-top: 0.2rem;
-        }
+        .bar-stats-section{margin:1rem;background:rgba(11,18,32,0.4);border-radius:1rem;border:1px solid var(--border);padding:.8rem}
+        .bar-stats-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+        .bar-item{margin-bottom:.7rem}
+        .bar-label{display:flex;justify-content:space-between;font-size:.7rem;font-weight:500;margin-bottom:.2rem}
+        .bar-bg{background:rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;height:8px;width:100%}
+        .bar-fill{height:100%;width:0%;border-radius:20px;transition:width .6s}
+        .fill-leve{background:linear-gradient(90deg,#10b981,#34d399)}
+        .fill-grave{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+        .fill-mortal{background:linear-gradient(90deg,#ef4444,#f97316)}
+        .fill-comuna{background:linear-gradient(90deg,#0F4C81,#3b82f6)}
+        .comuna-rank{font-size:.7rem;font-family:monospace;color:var(--accent)}
         
-        .btn-route-active {
-            background: #f97316 !important;
-            border-color: #f97316 !important;
-            color: white !important;
-        }
-        
-        /* Control de visibilidad del heatmap */
-        .heatmap-toggle {
-            margin-left: 0.5rem;
-            background: rgba(17,26,46,0.9);
-            border: 1px solid var(--accent);
-        }
-        .heatmap-toggle i {
-            color: var(--accent);
-        }
+        .btn-route-active{background:#f97316 !important;border-color:#f97316 !important;color:white !important}
+        .traffic-bajo{color:#10b981}
+        .traffic-medio{color:#f59e0b}
+        .traffic-alto{color:#ef4444}
     </style>
 </head>
 <body>
@@ -305,9 +238,7 @@ $faviconPath = '../../images/favico.png';
 <div class="topbar">
     <button class="pill" id="btnMenu"><i class="fa-solid fa-bars"></i><span>Menú</span></button>
     <div class="pill" style="cursor:default; gap:0.75rem;">
-        <div class="circular-logo">
-            <img src="<?php echo $logoPath; ?>" alt="RutaX Logo">
-        </div>
+        <div class="circular-logo"><img src="<?php echo $logoPath; ?>" alt="RutaX Logo"></div>
         <span class="live"></span>
         <span class="app-title-text"><?php echo htmlspecialchars($APP_NAME); ?></span>
         <span class="sm:hidden">RutaX</span>
@@ -318,7 +249,7 @@ $faviconPath = '../../images/favico.png';
         <button class="pill" id="btnListIncidents"><i class="fa-solid fa-list"></i><span>Incidentes</span></button>
         <button class="pill" id="btnGeolocate"><i class="fa-solid fa-location-dot"></i><span>Mi ubicación</span></button>
         <button class="pill" id="btnSafeRoute"><i class="fa-solid fa-route"></i><span>Ruta segura</span></button>
-        <button class="pill heatmap-toggle" id="toggleHeatmapBtn"><i class="fa-solid fa-fire"></i><span>Heatmap</span></button>
+        <button class="pill" id="toggleHeatmapBtn"><i class="fa-solid fa-fire"></i><span>Heatmap</span></button>
     </div>
 </div>
 
@@ -326,7 +257,7 @@ $faviconPath = '../../images/favico.png';
     <div class="modal-container">
         <div class="modal-header">
             <h3 class="flex items-center gap-2"><i class="fa-solid fa-car-crash text-amber-500"></i> Lista de Incidentes Activos</h3>
-            <button id="closeModalBtn" class="text-xl text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <button id="closeModalBtn"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div id="incidentListContainer" class="incident-list"></div>
     </div>
@@ -335,105 +266,57 @@ $faviconPath = '../../images/favico.png';
 <aside class="panel sidebar hidden" id="sidebar">
     <header>
         <div class="sidebar-logo">
-            <div class="circular-logo">
-                <img src="<?php echo $logoPath; ?>" alt="RutaX Logo">
-            </div>
-            <div><h3>RutaX</h3><small>Medellín Movilidata OS</small></div>
+            <div class="circular-logo"><img src="<?php echo $logoPath; ?>" alt="Logo"></div>
+            <div><h3>RutaX</h3><small>Colombia Movilidad OS</small></div>
         </div>
         <button class="icon-btn" id="closeSidebar"><i class="fa-solid fa-xmark"></i></button>
     </header>
     <div class="scroll">
         <div class="weather-card" id="weatherCard">
-            <div class="flex justify-between items-center">
-                <div>
-                    <div class="weather-temp" id="weatherTemp">--°C</div>
-                    <div class="weather-desc" id="weatherDesc">Cargando clima...</div>
-                </div>
-                <div class="text-4xl" id="weatherIcon"><i class="fa-solid fa-cloud-sun"></i></div>
-            </div>
-            <div class="flex justify-between mt-2 text-xs text-slate-400">
-                <span><i class="fa-solid fa-droplet"></i> <span id="weatherHumidity">--</span>%</span>
-                <span><i class="fa-solid fa-wind"></i> <span id="weatherWind">--</span> km/h</span>
-                <span><i class="fa-solid fa-temperature-low"></i> <span id="weatherFeels">--</span>°C</span>
-            </div>
+            <div class="flex justify-between"><div><div class="weather-temp" id="weatherTemp">--°C</div><div id="weatherDesc">Cargando...</div></div><div class="text-4xl" id="weatherIcon"><i class="fa-solid fa-cloud-sun"></i></div></div>
+            <div class="flex justify-between mt-2 text-xs"><span><i class="fa-solid fa-droplet"></i> <span id="weatherHumidity">--</span>%</span><span><i class="fa-solid fa-wind"></i> <span id="weatherWind">--</span> km/h</span><span><i class="fa-solid fa-temperature-low"></i> <span id="weatherFeels">--</span>°C</span></div>
+            <div class="flex justify-between mt-1 text-xs"><span><i class="fa-solid fa-gauge"></i> Presión: <span id="weatherPressure">--</span> hPa</span><span><i class="fa-regular fa-eye"></i> Visibilidad: <span id="weatherVisibility">--</span> km</span><span><i class="fa-solid fa-sun"></i> UV: <span id="uvIndex">--</span></span></div>
             <div class="weather-update" id="weatherUpdate"></div>
         </div>
 
+        <div class="forecast-card">
+            <div class="text-xs uppercase tracking-wide text-slate-400"><i class="fa-solid fa-calendar-week"></i> Pronóstico 3 días (Bogotá)</div>
+            <div id="forecastContainer" class="mt-1 space-y-1"></div>
+        </div>
+
         <div class="air-card" id="airCard">
-            <div class="flex justify-between items-center">
-                <div>
-                    <div class="text-xs uppercase tracking-wide text-slate-400"><i class="fa-solid fa-wind"></i> Calidad del Aire</div>
-                    <div class="air-quality-index" id="aqiValue">--</div>
-                    <div class="text-xs" id="aqiCategory">Cargando...</div>
-                </div>
-                <div class="text-3xl" id="aqiIcon"><i class="fa-solid fa-leaf"></i></div>
-            </div>
-            <div class="grid grid-cols-3 gap-1 mt-2 text-[10px] text-slate-400 text-center">
-                <div><span id="pm25">--</span> PM2.5</div>
-                <div><span id="pm10">--</span> PM10</div>
-                <div><span id="co2">--</span> CO₂</div>
-            </div>
+            <div class="flex justify-between"><div><div class="text-xs uppercase">Calidad del Aire</div><div class="air-quality-index" id="aqiValue">--</div><div class="text-xs" id="aqiCategory">Cargando...</div></div><div class="text-3xl" id="aqiIcon"><i class="fa-solid fa-leaf"></i></div></div>
+            <div class="grid grid-cols-3 gap-1 mt-2 text-center text-[10px]"><div><span id="pm25">--</span> PM2.5</div><div><span id="pm10">--</span> PM10</div><div><span id="co2">--</span> CO₂</div></div>
             <div class="weather-update" id="airUpdate"></div>
         </div>
 
         <div class="sun-card" id="sunCard">
-            <div class="flex justify-between items-center">
-                <div>
-                    <div class="text-xs uppercase tracking-wide text-slate-400"><i class="fa-regular fa-sun"></i> Iluminación solar</div>
-                    <div class="text-base font-bold" id="dayPeriod">--</div>
-                    <div class="text-[11px]" id="sunTimes">Salida: --:-- / Puesta: --:--</div>
-                </div>
-                <div class="sun-icon" id="sunIcon"><i class="fa-regular fa-sun"></i></div>
-            </div>
+            <div class="flex justify-between"><div><div class="text-xs uppercase">Iluminación solar</div><div class="text-base font-bold" id="dayPeriod">--</div><div class="text-[11px]" id="sunTimes">Salida: --:-- / Puesta: --:--</div></div><div class="sun-icon text-3xl" id="sunIcon"><i class="fa-regular fa-sun"></i></div></div>
             <div class="weather-update" id="sunUpdate"></div>
         </div>
 
         <div class="route-card" id="routeCard">
-            <div class="flex justify-between items-center">
-                <div>
-                    <div class="text-xs uppercase tracking-wide text-slate-400"><i class="fa-solid fa-map"></i> Ruta sugerida</div>
-                    <div class="text-sm font-bold" id="routeDistance">-- km</div>
-                    <div class="text-xs" id="routeDuration">-- min</div>
-                </div>
-                <div class="text-2xl" id="routeIcon"><i class="fa-solid fa-route"></i></div>
-            </div>
-            <div class="mt-2 text-xs text-slate-400" id="routeWarning"></div>
+            <div class="flex justify-between"><div><div class="text-xs uppercase">Ruta sugerida</div><div class="text-sm font-bold" id="routeDistance">-- km</div><div class="text-xs" id="routeDuration">-- min</div></div><div class="text-2xl"><i class="fa-solid fa-route"></i></div></div>
+            <div class="mt-2 text-xs" id="routeTrafficRisk"></div>
+            <div class="mt-1 text-xs text-slate-400" id="routeWarning"></div>
             <div class="weather-update" id="routeUpdate"></div>
         </div>
 
         <div class="p-4 space-y-3">
-            <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1 flex items-center gap-2">
-                <i class="fa-solid fa-bell"></i> Filtros de Consola
-            </div>
-            <button id="alertAllBtn" class="alert-btn w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl font-semibold flex items-center gap-3 text-left">
-                <i class="fa-solid fa-car-crash text-amber-500 text-xl"></i>
-                <div><div class="text-sm">Todos los Incidentes</div><div class="text-xs opacity-60" id="totalIncidentsLabel"><?php echo $totalIncidents; ?> registros</div></div>
-            </button>
-            <button id="alertDeathsBtn" class="alert-btn death-alert w-full bg-gradient-to-r from-red-950 to-red-900 border border-red-700 text-white p-3 rounded-xl font-semibold flex items-center gap-3 text-left">
-                <i class="fa-solid fa-skull-crossbones text-red-500 text-xl"></i>
-                <div><div class="text-sm">Casos Críticos / Mortales</div><div class="text-xs text-red-300 opacity-80" id="criticalIncidentsLabel"><?php echo $criticalCount; ?> alertas activas</div></div>
-            </button>
+            <div class="text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-bell"></i> Filtros</div>
+            <button id="alertAllBtn" class="alert-btn w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-left flex gap-2"><i class="fa-solid fa-car-crash text-amber-500"></i><div><div class="text-sm">Todos los Incidentes</div><div class="text-xs opacity-60" id="totalIncidentsLabel"><?php echo $totalIncidents; ?> registros</div></div></button>
+            <button id="alertDeathsBtn" class="alert-btn death-alert w-full bg-gradient-to-r from-red-950 to-red-900 border border-red-700 p-3 rounded-xl text-left flex gap-2"><i class="fa-solid fa-skull-crossbones text-red-500"></i><div><div class="text-sm">Casos Críticos / Mortales</div><div class="text-xs text-red-300 opacity-80" id="criticalIncidentsLabel"><?php echo $criticalCount; ?> alertas</div></div></button>
         </div>
 
         <div class="stats">
-            <div class="stat"><div class="label warn"><i class="fa-solid fa-chart-line"></i>Congestión</div><div class="value" id="sCong"><?php echo $baseCongestion; ?>%</div><div class="hint" id="sCongHint">Tiempo real</div></div>
-            <div class="stat"><div class="label danger"><i class="fa-solid fa-triangle-exclamation"></i>Puntos críticos</div><div class="value" id="sCrit"><?php echo $criticalCount; ?></div><div class="hint">Fatalidades/Graves</div></div>
-            <div class="stat"><div class="label ok"><i class="fa-solid fa-droplet"></i>Inundación</div><div class="value">Bajo</div><div class="hint">Quebradas</div></div>
-            <div class="stat"><div class="label ok"><i class="fa-solid fa-gauge-high"></i>Velocidad</div><div class="value" id="sSpeed"><?php echo $avgSpeed; ?> km/h</div><div class="hint">Estimación dinámica</div></div>
+            <div class="stat"><div class="label warn"><i class="fa-solid fa-chart-line"></i>Congestión</div><div class="value" id="sCong"><?php echo $baseCongestion; ?>%</div></div>
+            <div class="stat"><div class="label danger"><i class="fa-solid fa-triangle-exclamation"></i>Puntos críticos</div><div class="value" id="sCrit"><?php echo $criticalCount; ?></div></div>
+            <div class="stat"><div class="label ok"><i class="fa-solid fa-droplet"></i>Inundación</div><div class="value">Bajo</div></div>
+            <div class="stat"><div class="label ok"><i class="fa-solid fa-gauge-high"></i>Velocidad</div><div class="value" id="sSpeed"><?php echo $avgSpeed; ?> km/h</div></div>
         </div>
 
-        <div class="bar-stats-section">
-            <div class="bar-stats-title">
-                <i class="fa-solid fa-chart-simple"></i> Incidentes por gravedad
-            </div>
-            <div id="severityBarsContainer"></div>
-        </div>
-        <div class="bar-stats-section">
-            <div class="bar-stats-title">
-                <i class="fa-solid fa-ranking-star"></i> Top comunas con incidentes
-            </div>
-            <div id="comunaBarsContainer"></div>
-        </div>
+        <div class="bar-stats-section"><div class="bar-stats-title"><i class="fa-solid fa-chart-simple"></i> Incidentes por gravedad</div><div id="severityBarsContainer"></div></div>
+        <div class="bar-stats-section"><div class="bar-stats-title"><i class="fa-solid fa-ranking-star"></i> Departamentos con más incidentes</div><div id="comunaBarsContainer"></div></div>
 
         <nav class="menu">
             <div class="title">Navegación principal</div>
@@ -445,314 +328,237 @@ $faviconPath = '../../images/favico.png';
             <a href="../auth/google.php"><i class="fa-brands fa-google"></i> Google Auth</a>
         </nav>
     </div>
-    <footer>RutaX · TransiControl · SIMIT · <span id="footerTotalIncidents"><?php echo $totalIncidents; ?></span> incidentes en malla</footer>
+    <footer>RutaX · TransiControl · SIMIT · <span id="footerTotalIncidents"><?php echo $totalIncidents; ?></span> incidentes en Colombia</footer>
 </aside>
 
 <script>
-    // Variables globales
-    let map = null;
-    let mainClusterGroup = null;
-    let eventSource = null;
-    let allIncidents = [];
-    let userMarker = null;
-    let userCircle = null;
-    let currentRouteLayer = null;
-    let destinationMarker = null;
-    let selectingDestination = false;
-    let heatmapLayer = null;
-    let heatmapEnabled = true;
-    
-    let totalIncidentsCount = <?php echo $totalIncidents; ?>;
-    let criticalCount = <?php echo $criticalCount; ?>;
-    let congestionPercent = <?php echo $baseCongestion; ?>;
-    let avgSpeedKmh = <?php echo $avgSpeed; ?>;
-    let isModalOpen = false;
-    
-    const MEDELLIN_LAT = 6.2476;
-    const MEDELLIN_LON = -75.5658;
-    
+    // -------------------- VARIABLES GLOBALES --------------------
+    let map = null, mainClusterGroup = null, eventSource = null, allIncidents = [];
+    let userMarker = null, userCircle = null, currentRouteLayer = null, destinationMarker = null;
+    let selectingDestination = false, heatmapLayer = null, heatmapEnabled = true;
+    let totalIncidentsCount = <?php echo $totalIncidents; ?>, criticalCount = <?php echo $criticalCount; ?>;
+    let congestionPercent = <?php echo $baseCongestion; ?>, avgSpeedKmh = <?php echo $avgSpeed; ?>, isModalOpen = false;
+    const COLOMBIA_CENTER = { lat: 4.5709, lng: -74.2973 };
     const OR_API_KEY = '5b3ce3597851110001cf6248c299c86a284a4e28bb1e4f3efb6cee29';
     const ORS_BASE_URL = 'https://api.openrouteservice.org/v2/directions/driving-car';
-    
-    // Inicialización del mapa
+    let geocodeEnabled = true;
+    let wasHeatmapEnabledByRoute = false;
+    const BOGOTA = { lat: 4.7109, lng: -74.0721 };
+
+    // -------------------- MAPA --------------------
     function initMap() {
-        map = L.map('map', { zoomControl: false }).setView([MEDELLIN_LAT, MEDELLIN_LON], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap · CARTO',
-            maxZoom: 19
-        }).addTo(map);
+        map = L.map('map', { zoomControl: false }).setView([COLOMBIA_CENTER.lat, COLOMBIA_CENTER.lng], 6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap · CARTO', maxZoom: 19 }).addTo(map);
         mainClusterGroup = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true });
         map.addLayer(mainClusterGroup);
-        
         connectToEventStream();
-        map.on('click', onMapClickForDestination);
+        map.on('click', onMapClick);
     }
-    
-    // Heatmap: generar puntos desde incidentes (lat, lng, intensidad)
+
+    async function reverseGeocode(lat, lng) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+            const data = await res.json();
+            let addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            if (addr.length > 60) addr = addr.substring(0,57)+'...';
+            L.popup().setLatLng([lat,lng]).setContent(`<strong>Ubicación</strong><br>${addr}`).openOn(map);
+        } catch(e) { console.error(e); }
+    }
+
+    function onMapClick(e) {
+        if (selectingDestination) {
+            suggestSafeRoute(e.latlng.lat, e.latlng.lng);
+            deactivateRouteSelection();
+        } else if (geocodeEnabled) reverseGeocode(e.latlng.lat, e.latlng.lng);
+    }
+
+    // -------------------- HEATMAP (rojo) --------------------
     function updateHeatmap() {
-        if (heatmapLayer) {
-            map.removeLayer(heatmapLayer);
-        }
+        if (heatmapLayer) map.removeLayer(heatmapLayer);
         if (!heatmapEnabled) return;
-        
-        // Preparar puntos para el heatmap: [lat, lng, intensidad]
-        // La intensidad es mayor para incidentes graves/mortales
-        const heatPoints = [];
-        allIncidents.forEach(incident => {
-            const [lng, lat] = incident.geometry.coordinates;
-            const grav = (incident.properties.gravedad || '').toUpperCase();
+        const points = allIncidents.map(inc => {
+            const [lng, lat] = inc.geometry.coordinates;
+            const grav = (inc.properties.gravedad || '').toUpperCase();
             let intensity = 0.5;
-            if (grav.includes('MUERTO') || grav.includes('FATAL') || grav.includes('DECESO') || grav === 'MORTAL') {
-                intensity = 1.0;
-            } else if (grav.includes('GRAVE') || grav.includes('HOSPITAL')) {
-                intensity = 0.8;
-            } else if (grav.includes('LEVE')) {
-                intensity = 0.4;
-            } else {
-                intensity = 0.3;
-            }
-            heatPoints.push([lat, lng, intensity]);
+            if (grav.includes('MUERTO') || grav.includes('FATAL') || grav.includes('DECESO')) intensity = 1.0;
+            else if (grav.includes('GRAVE') || grav.includes('HOSPITAL')) intensity = 0.8;
+            else if (grav.includes('LEVE')) intensity = 0.4;
+            else intensity = 0.3;
+            return [lat, lng, intensity];
         });
-        
-        if (heatPoints.length > 0) {
-            heatmapLayer = L.heatLayer(heatPoints, {
-                radius: 25,
-                blur: 15,
-                maxZoom: 17,
-                minOpacity: 0.3,
-                gradient: {
-                    0.2: '#10b981',  // verde para baja densidad
-                    0.4: '#f59e0b',  // amarillo/naranja
-                    0.7: '#f97316',  // naranja intenso
-                    1.0: '#ef4444'   // rojo para alta concentración
-                }
+        if (points.length) {
+            heatmapLayer = L.heatLayer(points, {
+                radius: 25, blur: 15, maxZoom: 17, minOpacity: 0.4,
+                gradient: { 0.2: '#f97316', 0.5: '#ef4444', 0.8: '#b91c1c', 1.0: '#7f1d1d' }
             }).addTo(map);
         }
     }
-    
-    // Alternar visibilidad del heatmap
+
     function toggleHeatmap() {
         heatmapEnabled = !heatmapEnabled;
         const btn = document.getElementById('toggleHeatmapBtn');
-        if (heatmapEnabled) {
-            btn.style.background = 'rgba(17,26,46,0.9)';
-            btn.style.borderColor = 'var(--accent)';
-            updateHeatmap();
-        } else {
-            if (heatmapLayer) {
-                map.removeLayer(heatmapLayer);
-                heatmapLayer = null;
-            }
-            btn.style.background = 'rgba(239,68,68,0.5)';
-            btn.style.borderColor = '#ef4444';
-        }
+        if (heatmapEnabled) { updateHeatmap(); btn.style.background = 'rgba(17,26,46,0.9)'; btn.style.borderColor = 'var(--accent)'; }
+        else { if (heatmapLayer) map.removeLayer(heatmapLayer); btn.style.background = 'rgba(239,68,68,0.5)'; btn.style.borderColor = '#ef4444'; }
     }
-    
-    // Manejo de selección de destino
-    function onMapClickForDestination(e) {
-        if (selectingDestination) {
-            const { lat, lng } = e.latlng;
-            suggestSafeRoute(lat, lng);
-            deactivateRouteSelection();
-        }
-    }
-    
+
+    // -------------------- RUTA SEGURA --------------------
     function activateRouteSelection() {
         selectingDestination = true;
-        const btn = document.getElementById('btnSafeRoute');
-        btn.classList.add('btn-route-active');
-        document.getElementById('routeUpdate').innerHTML = 'Haz clic en el mapa para seleccionar el destino';
+        geocodeEnabled = false;
+        if (!heatmapEnabled) {
+            wasHeatmapEnabledByRoute = true;
+            heatmapEnabled = true;
+            updateHeatmap();
+            document.getElementById('toggleHeatmapBtn').style.background = 'rgba(17,26,46,0.9)';
+            document.getElementById('toggleHeatmapBtn').style.borderColor = 'var(--accent)';
+        }
+        document.getElementById('btnSafeRoute').classList.add('btn-route-active');
+        document.getElementById('routeUpdate').innerHTML = 'Haz clic en el mapa para seleccionar destino (zonas rojas = alta congestión)';
         if (currentRouteLayer) map.removeLayer(currentRouteLayer);
         if (destinationMarker) map.removeLayer(destinationMarker);
-        currentRouteLayer = null;
-        destinationMarker = null;
+        currentRouteLayer = null; destinationMarker = null;
         document.getElementById('routeDistance').innerHTML = '-- km';
         document.getElementById('routeDuration').innerHTML = '-- min';
         document.getElementById('routeWarning').innerHTML = '';
+        document.getElementById('routeTrafficRisk').innerHTML = '';
     }
-    
+
     function deactivateRouteSelection() {
         selectingDestination = false;
-        const btn = document.getElementById('btnSafeRoute');
-        btn.classList.remove('btn-route-active');
-    }
-    
-    async function suggestSafeRoute(destLat, destLng) {
-        let originLat, originLng;
-        if (userMarker) {
-            const latlng = userMarker.getLatLng();
-            originLat = latlng.lat;
-            originLng = latlng.lng;
-        } else {
-            originLat = MEDELLIN_LAT;
-            originLng = MEDELLIN_LON;
+        geocodeEnabled = true;
+        if (wasHeatmapEnabledByRoute) {
+            heatmapEnabled = false;
+            if (heatmapLayer) map.removeLayer(heatmapLayer);
+            document.getElementById('toggleHeatmapBtn').style.background = 'rgba(239,68,68,0.5)';
+            document.getElementById('toggleHeatmapBtn').style.borderColor = '#ef4444';
+            wasHeatmapEnabledByRoute = false;
         }
-        
-        const url = `${ORS_BASE_URL}?api_key=${OR_API_KEY}&start=${originLng},${originLat}&end=${destLng},${destLat}`;
-        
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.features && data.features.length > 0) {
-                const route = data.features[0];
-                const geometry = route.geometry.coordinates;
-                const distance = route.properties.summary.distance / 1000;
-                const duration = route.properties.summary.duration / 60;
-                
-                const latlngs = geometry.map(coord => [coord[1], coord[0]]);
-                if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-                currentRouteLayer = L.polyline(latlngs, { color: '#f97316', weight: 6, opacity: 0.9 }).addTo(map);
-                map.fitBounds(currentRouteLayer.getBounds());
-                
-                if (destinationMarker) map.removeLayer(destinationMarker);
-                const destIcon = L.divIcon({
-                    html: '<i class="fa-solid fa-flag-checkered" style="color:#f97316; font-size:28px;"></i>',
-                    iconSize: [28, 28],
-                    className: 'dest-marker'
-                });
-                destinationMarker = L.marker([destLat, destLng], { icon: destIcon }).addTo(map)
-                    .bindPopup('Destino seleccionado').openPopup();
-                
-                document.getElementById('routeDistance').innerHTML = distance.toFixed(2) + ' km';
-                document.getElementById('routeDuration').innerHTML = Math.round(duration) + ' min';
-                
-                const warnings = analyzeIncidentsNearRoute(latlngs, 200);
-                if (warnings.length > 0) {
-                    document.getElementById('routeWarning').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + warnings.slice(0, 3).join('; ');
-                } else {
-                    document.getElementById('routeWarning').innerHTML = '<i class="fa-solid fa-check-circle"></i> Ruta sin incidentes cercanos (radio 200m)';
-                }
-                document.getElementById('routeUpdate').innerHTML = `Actualizado: ${new Date().toLocaleTimeString()}`;
-            } else {
-                throw new Error('No se encontró ruta');
-            }
-        } catch (error) {
-            console.error('Error al calcular ruta:', error);
-            document.getElementById('routeWarning').innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Error al calcular la ruta.';
-            document.getElementById('routeUpdate').innerHTML = 'Error';
-        }
+        document.getElementById('btnSafeRoute').classList.remove('btn-route-active');
     }
-    
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+
+    function getDistance(lat1,lng1,lat2,lng2) {
+        const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
-    
-    function analyzeIncidentsNearRoute(routeLatLngs, thresholdMeters = 200) {
-        const warnings = [];
-        for (const incident of allIncidents) {
-            const [lng, lat] = incident.geometry.coordinates;
+
+    function calculateTrafficRisk(routeLatLngs) {
+        let totalWeight = 0;
+        for (const inc of allIncidents) {
+            const [lng,lat] = inc.geometry.coordinates;
             let minDist = Infinity;
-            for (let i = 0; i < routeLatLngs.length; i++) {
-                const d = getDistance(lat, lng, routeLatLngs[i][0], routeLatLngs[i][1]);
+            for (let i=0; i<routeLatLngs.length; i++) {
+                const d = getDistance(lat,lng, routeLatLngs[i][0], routeLatLngs[i][1]);
                 if (d < minDist) minDist = d;
             }
-            if (minDist <= thresholdMeters) {
-                const grav = (incident.properties.gravedad || '').toUpperCase();
-                let level = '';
-                if (grav.includes('MUERTO') || grav.includes('FATAL') || grav.includes('DECESO')) level = 'Mortal';
-                else if (grav.includes('GRAVE') || grav.includes('HOSPITAL')) level = 'Grave';
-                else level = 'Leve';
-                warnings.push(`${level} a ${Math.round(minDist)}m (${incident.properties.clase || 'Incidente'})`);
+            if (minDist <= 150) {
+                const grav = (inc.properties.gravedad || '').toUpperCase();
+                let w = 1;
+                if (grav.includes('MUERTO')||grav.includes('FATAL')||grav.includes('DECESO')) w=3;
+                else if (grav.includes('GRAVE')||grav.includes('HOSPITAL')) w=2;
+                totalWeight += w;
             }
         }
-        return warnings;
+        if (totalWeight===0) return { level:'Bajo', class:'traffic-bajo', message:'Tráfico bajo / Riesgo mínimo' };
+        if (totalWeight<=5) return { level:'Medio', class:'traffic-medio', message:'Tráfico moderado - Precaución' };
+        return { level:'Alto', class:'traffic-alto', message:'Alta congestión / Riesgo elevado. Evita esta ruta.' };
     }
-    
-    function zoomIn() { if (map) map.zoomIn(); }
-    function zoomOut() { if (map) map.zoomOut(); }
-    
-    function locateUser() {
-        if (!navigator.geolocation) {
-            alert("Geolocalización no soportada.");
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const accuracy = position.coords.accuracy;
-                map.setView([lat, lng], 15);
-                if (userMarker) map.removeLayer(userMarker);
-                if (userCircle) map.removeLayer(userCircle);
-                const userIcon = L.divIcon({
-                    html: '<div style="background-color:#3b82f6; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>',
-                    iconSize: [16, 16]
-                });
-                userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map)
-                    .bindPopup('<strong>Tu ubicación actual</strong><br>Precisión: ±' + Math.round(accuracy) + ' m')
-                    .openPopup();
-                userCircle = L.circle([lat, lng], {
-                    radius: accuracy,
-                    color: '#3b82f6',
-                    fillColor: '#3b82f6',
-                    fillOpacity: 0.15,
-                    weight: 1.5
-                }).addTo(map);
-            },
-            (error) => {
-                let msg = "";
-                switch(error.code) {
-                    case error.PERMISSION_DENIED: msg = "Permiso denegado."; break;
-                    case error.POSITION_UNAVAILABLE: msg = "Ubicación no disponible."; break;
-                    case error.TIMEOUT: msg = "Tiempo agotado."; break;
-                    default: msg = "Error desconocido.";
+
+    async function suggestSafeRoute(destLat, destLng) {
+        let originLat, originLng;
+        if (userMarker) { const ll = userMarker.getLatLng(); originLat = ll.lat; originLng = ll.lng; }
+        else { originLat = COLOMBIA_CENTER.lat; originLng = COLOMBIA_CENTER.lng; }
+        const url = `${ORS_BASE_URL}?api_key=${OR_API_KEY}&start=${originLng},${originLat}&end=${destLng},${destLat}`;
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.features && data.features.length) {
+                const geom = data.features[0].geometry.coordinates;
+                const dist = data.features[0].properties.summary.distance/1000;
+                const dura = data.features[0].properties.summary.duration/60;
+                const latlngs = geom.map(c=>[c[1],c[0]]);
+                if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+                currentRouteLayer = L.polyline(latlngs, { color: '#10b981', weight: 6, opacity: 0.9 }).addTo(map);
+                map.fitBounds(currentRouteLayer.getBounds());
+                if (destinationMarker) map.removeLayer(destinationMarker);
+                const destIcon = L.divIcon({ html: '<i class="fa-solid fa-flag-checkered" style="color:#10b981; font-size:28px;"></i>', iconSize:[28,28] });
+                destinationMarker = L.marker([destLat,destLng], { icon: destIcon }).addTo(map).bindPopup('Destino').openPopup();
+                document.getElementById('routeDistance').innerHTML = dist.toFixed(2)+' km';
+                document.getElementById('routeDuration').innerHTML = Math.round(dura)+' min';
+                const traffic = calculateTrafficRisk(latlngs);
+                document.getElementById('routeTrafficRisk').innerHTML = `<i class="fa-solid fa-car"></i> Tráfico/riesgo: <span class="${traffic.class}">${traffic.level}</span><br><span class="text-xs">${traffic.message}</span>`;
+                let warnings = [];
+                for (const inc of allIncidents) {
+                    const [lng,lat] = inc.geometry.coordinates;
+                    let minD = Infinity;
+                    for (let i=0; i<latlngs.length; i++) {
+                        const d = getDistance(lat,lng, latlngs[i][0], latlngs[i][1]);
+                        if (d<minD) minD=d;
+                    }
+                    if (minD<=200) warnings.push(`${inc.properties.gravedad||'Incidente'} a ${Math.round(minD)}m`);
                 }
-                alert("No se pudo obtener tu ubicación: " + msg);
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
+                document.getElementById('routeWarning').innerHTML = warnings.length ? '<i class="fa-solid fa-triangle-exclamation"></i> '+warnings.slice(0,3).join('; ') : '<i class="fa-solid fa-check-circle"></i> Sin incidentes cercanos (radio 200m)';
+                document.getElementById('routeUpdate').innerHTML = `Actualizado: ${new Date().toLocaleTimeString()}`;
+            } else throw new Error('Ruta no encontrada');
+        } catch(e) { console.error(e); document.getElementById('routeWarning').innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Error al calcular la ruta'; }
     }
-    
+
+    // -------------------- APIs externas (clima, aire, sol) --------------------
     async function fetchWeather() {
         try {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${MEDELLIN_LAT}&longitude=${MEDELLIN_LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${BOGOTA.lat}&longitude=${BOGOTA.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl,visibility,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`;
             const resp = await fetch(url);
             const data = await resp.json();
             if (data?.current) {
                 const code = data.current.weather_code;
-                let icon = 'fa-cloud-sun', desc = '';
-                if (code === 0) { icon = 'fa-sun'; desc = 'Despejado'; }
-                else if (code === 1 || code === 2) { icon = 'fa-cloud-sun'; desc = 'Parcialmente nublado'; }
-                else if (code === 3) { icon = 'fa-cloud'; desc = 'Nublado'; }
-                else if (code >= 45 && code <= 48) { icon = 'fa-smog'; desc = 'Niebla'; }
-                else if (code >= 51 && code <= 55) { icon = 'fa-cloud-rain'; desc = 'Llovizna'; }
-                else if (code >= 61 && code <= 65) { icon = 'fa-cloud-showers-heavy'; desc = 'Lluvia'; }
-                else if (code >= 71 && code <= 77) { icon = 'fa-snowflake'; desc = 'Nieve'; }
-                else if (code >= 80 && code <= 82) { icon = 'fa-cloud-rain'; desc = 'Chubascos'; }
-                else if (code >= 95 && code <= 99) { icon = 'fa-cloud-bolt'; desc = 'Tormenta'; }
-                else { icon = 'fa-cloud'; desc = 'Variable'; }
+                let icon='fa-cloud-sun', desc='';
+                if (code===0) { icon='fa-sun'; desc='Despejado'; }
+                else if (code===1||code===2) { icon='fa-cloud-sun'; desc='Parcialmente nublado'; }
+                else if (code===3) { icon='fa-cloud'; desc='Nublado'; }
+                else if (code>=45&&code<=48) { icon='fa-smog'; desc='Niebla'; }
+                else if (code>=51&&code<=55) { icon='fa-cloud-rain'; desc='Llovizna'; }
+                else if (code>=61&&code<=65) { icon='fa-cloud-showers-heavy'; desc='Lluvia'; }
+                else if (code>=95&&code<=99) { icon='fa-cloud-bolt'; desc='Tormenta'; }
+                else { icon='fa-cloud'; desc='Variable'; }
                 document.getElementById('weatherTemp').innerHTML = `${Math.round(data.current.temperature_2m)}°C`;
                 document.getElementById('weatherDesc').innerHTML = desc;
                 document.getElementById('weatherHumidity').innerHTML = data.current.relative_humidity_2m;
                 document.getElementById('weatherWind').innerHTML = Math.round(data.current.wind_speed_10m);
                 document.getElementById('weatherFeels').innerHTML = Math.round(data.current.apparent_temperature);
+                document.getElementById('weatherPressure').innerHTML = data.current.pressure_msl;
+                document.getElementById('weatherVisibility').innerHTML = (data.current.visibility/1000).toFixed(1);
+                document.getElementById('uvIndex').innerHTML = data.current.uv_index;
                 document.getElementById('weatherIcon').innerHTML = `<i class="fa-solid ${icon}"></i>`;
                 document.getElementById('weatherUpdate').innerHTML = `Actualizado: ${new Date().toLocaleTimeString()}`;
             }
+            if (data?.daily) {
+                let html = '';
+                for (let i=0;i<3;i++) {
+                    const day = data.daily.time[i].slice(5);
+                    const max = data.daily.temperature_2m_max[i];
+                    const min = data.daily.temperature_2m_min[i];
+                    const rain = data.daily.precipitation_probability_max[i];
+                    let ic = (data.daily.weather_code[i]===0)?'☀️':(data.daily.weather_code[i]<=2)?'⛅':(data.daily.weather_code[i]>=61)?'🌧️':'☁️';
+                    html += `<div class="forecast-item"><span>${ic} ${day}</span><span>${Math.round(min)}°/${Math.round(max)}°</span><span>💧${rain}%</span></div>`;
+                }
+                document.getElementById('forecastContainer').innerHTML = html;
+            }
         } catch(e) { console.error(e); }
     }
-    
+
     async function fetchAirQuality() {
         try {
-            const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${MEDELLIN_LAT}&longitude=${MEDELLIN_LON}&current=us_aqi,pm10,pm2_5,carbon_monoxide&timezone=auto`;
+            const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${BOGOTA.lat}&longitude=${BOGOTA.lng}&current=us_aqi,pm10,pm2_5,carbon_monoxide&timezone=auto`;
             const resp = await fetch(url);
             const data = await resp.json();
             if (data?.current) {
                 const aqi = data.current.us_aqi;
-                let cat = '', ico = '', col = '';
-                if (aqi <= 50) { cat = 'Bueno'; ico = 'fa-smile'; col = '#10b981'; }
-                else if (aqi <= 100) { cat = 'Moderado'; ico = 'fa-meh'; col = '#f59e0b'; }
-                else if (aqi <= 150) { cat = 'Insalubre (sensible)'; ico = 'fa-mask'; col = '#f97316'; }
-                else if (aqi <= 200) { cat = 'Insalubre'; ico = 'fa-skull-crossbones'; col = '#ef4444'; }
-                else { cat = 'Muy insalubre'; ico = 'fa-biohazard'; col = '#b91c1c'; }
+                let cat,ico,col;
+                if (aqi<=50) { cat='Bueno'; ico='fa-smile'; col='#10b981'; }
+                else if (aqi<=100) { cat='Moderado'; ico='fa-meh'; col='#f59e0b'; }
+                else if (aqi<=150) { cat='Insalubre (sensible)'; ico='fa-mask'; col='#f97316'; }
+                else if (aqi<=200) { cat='Insalubre'; ico='fa-skull-crossbones'; col='#ef4444'; }
+                else { cat='Muy insalubre'; ico='fa-biohazard'; col='#b91c1c'; }
                 document.getElementById('aqiValue').innerHTML = aqi;
                 document.getElementById('aqiCategory').innerHTML = cat;
                 document.getElementById('aqiIcon').innerHTML = `<i class="fa-solid ${ico}" style="color:${col}"></i>`;
@@ -763,202 +569,193 @@ $faviconPath = '../../images/favico.png';
             }
         } catch(e) { console.error(e); }
     }
-    
+
     async function fetchSunriseSunset() {
         try {
             const today = new Date().toISOString().split('T')[0];
-            const url = `https://api.sunrise-sunset.org/json?lat=${MEDELLIN_LAT}&lng=${MEDELLIN_LON}&date=${today}&formatted=0`;
+            const url = `https://api.sunrise-sunset.org/json?lat=${BOGOTA.lat}&lng=${BOGOTA.lng}&date=${today}&formatted=0`;
             const resp = await fetch(url);
             const data = await resp.json();
-            if (data.status === 'OK') {
-                const sunriseUTC = new Date(data.results.sunrise);
-                const sunsetUTC = new Date(data.results.sunset);
+            if (data.status==='OK') {
+                const sunrise = new Date(data.results.sunrise);
+                const sunset = new Date(data.results.sunset);
                 const now = new Date();
-                const sunriseLocal = new Date(sunriseUTC.getTime());
-                const sunsetLocal = new Date(sunsetUTC.getTime());
-                const sunriseStr = sunriseLocal.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                const sunsetStr = sunsetLocal.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                const isDay = now >= sunriseLocal && now <= sunsetLocal;
-                const period = isDay ? 'Día (alta visibilidad)' : 'Noche (conducción con precaución)';
-                const icon = isDay ? 'fa-sun' : 'fa-moon';
-                document.getElementById('dayPeriod').innerHTML = period;
-                document.getElementById('sunTimes').innerHTML = `Salida: ${sunriseStr} / Puesta: ${sunsetStr}`;
-                document.getElementById('sunIcon').innerHTML = `<i class="fa-regular ${icon}"></i>`;
+                const isDay = now >= sunrise && now <= sunset;
+                document.getElementById('dayPeriod').innerHTML = isDay ? 'Día (alta visibilidad)' : 'Noche (conducción con precaución)';
+                document.getElementById('sunTimes').innerHTML = `Salida: ${sunrise.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} / Puesta: ${sunset.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+                document.getElementById('sunIcon').innerHTML = `<i class="fa-regular ${isDay ? 'fa-sun' : 'fa-moon'}"></i>`;
                 document.getElementById('sunUpdate').innerHTML = `Actualizado: ${now.toLocaleTimeString()}`;
             }
         } catch(e) { console.error(e); }
     }
-    
+
+    // -------------------- INCIDENTES SSE --------------------
     function connectToEventStream() {
         if (eventSource) eventSource.close();
         eventSource = new EventSource('stream_incidents.php');
-        eventSource.onmessage = (e) => {
-            try {
-                const inc = JSON.parse(e.data);
-                handleNewIncident(inc);
-            } catch(ex) {}
-        };
-        eventSource.onerror = () => {
-            eventSource.close();
-            setTimeout(connectToEventStream, 5000);
-        };
+        eventSource.onmessage = e => { try { handleNewIncident(JSON.parse(e.data)); } catch(ex){} };
+        eventSource.onerror = () => { eventSource.close(); setTimeout(connectToEventStream,5000); };
     }
-    
-    function handleNewIncident(incident) {
-        allIncidents.push(incident);
+
+    function handleNewIncident(inc) {
+        allIncidents.push(inc);
         totalIncidentsCount++;
-        const grav = (incident.properties.gravedad || '').toUpperCase();
-        if (grav.includes('MUERTO') || grav.includes('FATAL') || grav.includes('DECESO') || grav === 'MORTAL') criticalCount++;
-        congestionPercent = Math.min(85, 20 + Math.floor(totalIncidentsCount / 2.5));
-        avgSpeedKmh = Math.max(12, 45 - Math.floor(congestionPercent / 2.2));
-        
-        document.getElementById('totalIncidentsLabel').innerHTML = totalIncidentsCount + ' registros';
-        document.getElementById('criticalIncidentsLabel').innerHTML = criticalCount + ' alertas activas';
+        const g = (inc.properties.gravedad||'').toUpperCase();
+        if (g.includes('MUERTO')||g.includes('FATAL')||g.includes('DECESO')) criticalCount++;
+        congestionPercent = Math.min(85,20+Math.floor(totalIncidentsCount/2.5));
+        avgSpeedKmh = Math.max(12,45-Math.floor(congestionPercent/2.2));
+        document.getElementById('totalIncidentsLabel').innerHTML = totalIncidentsCount+' registros';
+        document.getElementById('criticalIncidentsLabel').innerHTML = criticalCount+' alertas';
         document.getElementById('footerTotalIncidents').innerHTML = totalIncidentsCount;
         document.getElementById('sCrit').innerHTML = criticalCount;
-        document.getElementById('sCong').innerHTML = congestionPercent + '%';
-        document.getElementById('sSpeed').innerHTML = avgSpeedKmh + ' km/h';
-        addIncidentToMap(incident);
+        document.getElementById('sCong').innerHTML = congestionPercent+'%';
+        document.getElementById('sSpeed').innerHTML = avgSpeedKmh+' km/h';
+        addIncidentToMap(inc);
         if (isModalOpen) refreshIncidentList();
         updateBarStats();
-        updateHeatmap(); // Actualizar heatmap al agregar nuevo incidente
+        updateHeatmap();
     }
-    
-    function addIncidentToMap(incident) {
-        const [lng, lat] = incident.geometry.coordinates;
-        const props = incident.properties;
+
+    function addIncidentToMap(inc) {
+        const [lng,lat] = inc.geometry.coordinates;
+        const props = inc.properties;
         let color = '#3b82f6';
-        const grav = (props.gravedad || '').toUpperCase();
-        if (grav.includes('MUERTO') || grav.includes('FATAL') || grav.includes('DECESO') || grav === 'MORTAL') color = '#ef4444';
-        else if (grav.includes('GRAVE') || grav.includes('HOSPITAL')) color = '#f97316';
-        else if (grav.includes('LEVE')) color = '#eab308';
-        const marker = L.circleMarker([lat, lng], { radius: 8, fillColor: color, color: '#0b1220', weight: 1.5, fillOpacity: 0.9 });
-        let nivel = 'popup-leve', titulo = 'INCIDENTE REGULAR', icono = '<i class="fas fa-car"></i>';
-        if (grav.includes('MUERTO') || grav.includes('FATAL') || grav.includes('DECESO') || grav === 'MORTAL') { nivel = 'popup-mortal'; titulo = 'CASO FATAL'; icono = '<i class="fas fa-skull"></i>'; }
-        else if (grav.includes('GRAVE') || grav.includes('HOSPITAL')) { nivel = 'popup-grave'; titulo = 'ALERTA CRÍTICA'; icono = '<i class="fas fa-exclamation-triangle"></i>'; }
+        const g = (props.gravedad||'').toUpperCase();
+        if (g.includes('MUERTO')||g.includes('FATAL')||g.includes('DECESO')) color='#ef4444';
+        else if (g.includes('GRAVE')||g.includes('HOSPITAL')) color='#f97316';
+        else if (g.includes('LEVE')) color='#eab308';
+        const marker = L.circleMarker([lat,lng], { radius:8, fillColor:color, color:'#0b1220', weight:1.5, fillOpacity:0.9 });
+        let nivel='popup-leve', titulo='INCIDENTE REGULAR', icono='<i class="fas fa-car"></i>';
+        if (g.includes('MUERTO')||g.includes('FATAL')) { nivel='popup-mortal'; titulo='CASO FATAL'; icono='<i class="fas fa-skull"></i>'; }
+        else if (g.includes('GRAVE')) { nivel='popup-grave'; titulo='ALERTA CRÍTICA'; icono='<i class="fas fa-exclamation-triangle"></i>'; }
         let tipoIcono = '<i class="fas fa-car-crash"></i>';
-        const tipo = props.clase || props.tipo || 'Incidente';
-        if (tipo.toLowerCase().includes('choque')) tipoIcono = '<i class="fas fa-car-crash"></i>';
-        else if (tipo.toLowerCase().includes('moto')) tipoIcono = '<i class="fas fa-motorcycle"></i>';
-        else if (tipo.toLowerCase().includes('atropello')) tipoIcono = '<i class="fas fa-person-walking"></i>';
-        const popupHtml = `<div class="custom-popup ${nivel}"><div class="popup-header"><span>${icono}</span><span>${titulo}</span></div><div class="popup-content"><div class="popup-row"><span class="popup-label">Evento:</span><span class="popup-value">${tipoIcono} ${tipo}</span></div><div class="popup-row"><span class="popup-label">Dirección:</span><span class="popup-value">${props.direccion || 'No registrada'}</span></div><div class="popup-row"><span class="popup-label">Ubicación:</span><span class="popup-value">${props.barrio || ''} • Comuna ${props.comuna || 'N/A'}</span></div><div class="popup-row"><span class="popup-label">Hora:</span><span class="popup-value">${props.fecha} ${props.hora}</span></div><div class="popup-row"><span class="popup-label">Gravedad:</span><span class="popup-value gravedad-destacada">${props.gravedad}</span></div></div></div>`;
-        marker.bindPopup(popupHtml, { className: 'enhanced-popup' });
+        const tipo = props.clase||props.tipo||'Incidente';
+        if (tipo.toLowerCase().includes('moto')) tipoIcono='<i class="fas fa-motorcycle"></i>';
+        else if (tipo.toLowerCase().includes('atropello')) tipoIcono='<i class="fas fa-person-walking"></i>';
+        const popupHtml = `<div class="custom-popup ${nivel}"><div class="popup-header">${icono} ${titulo}</div><div class="popup-content"><div class="popup-row"><span>Evento:</span><span>${tipoIcono} ${tipo}</span></div><div class="popup-row"><span>Dirección:</span><span>${props.direccion||'N/R'}</span></div><div class="popup-row"><span>Ubicación:</span><span>${props.barrio||''} • ${props.comuna||'N/A'}</span></div><div class="popup-row"><span>Hora:</span><span>${props.fecha} ${props.hora}</span></div><div class="popup-row"><span>Gravedad:</span><span class="gravedad-destacada">${props.gravedad}</span></div></div></div>`;
+        marker.bindPopup(popupHtml, { className:'enhanced-popup' });
         mainClusterGroup.addLayer(marker);
     }
-    
+
+    // -------------------- ESTADÍSTICAS Y BARRAS --------------------
     function computeSeverityStats() {
-        let leves=0, graves=0, mortales=0;
-        allIncidents.forEach(i => {
-            const g = (i.properties.gravedad || '').toUpperCase();
-            if (g.includes('MUERTO') || g.includes('FATAL') || g.includes('DECESO') || g === 'MORTAL') mortales++;
-            else if (g.includes('GRAVE') || g.includes('HOSPITAL')) graves++;
+        let leves=0,graves=0,mortales=0;
+        allIncidents.forEach(i=>{
+            const g=(i.properties.gravedad||'').toUpperCase();
+            if (g.includes('MUERTO')||g.includes('FATAL')||g.includes('DECESO')) mortales++;
+            else if (g.includes('GRAVE')||g.includes('HOSPITAL')) graves++;
             else leves++;
         });
-        return { leves, graves, mortales, total: allIncidents.length };
+        return {leves,graves,mortales,total:allIncidents.length};
     }
-    
+
     function computeComunaStats() {
         const mapC = new Map();
-        allIncidents.forEach(i => {
-            const c = i.properties.comuna || 'Desconocida';
-            mapC.set(c, (mapC.get(c)||0)+1);
+        allIncidents.forEach(i=>{
+            const c=i.properties.comuna||'Desconocido';
+            mapC.set(c,(mapC.get(c)||0)+1);
         });
-        return Array.from(mapC.entries()).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,c])=>({name:n,count:c}));
+        return Array.from(mapC.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}));
     }
-    
+
     function updateBarStats() {
         const s = computeSeverityStats();
         const total = s.total;
         document.getElementById('severityBarsContainer').innerHTML = `
-            <div class="bar-item"><div class="bar-label"><span><i class="fa-regular fa-circle-check text-emerald-400"></i> Leves</span><span>${s.leves} (${total?((s.leves/total)*100).toFixed(0):0}%)</span></div><div class="bar-bg"><div class="bar-fill fill-leve" style="width: ${total?(s.leves/total)*100:0}%;"></div></div></div>
-            <div class="bar-item"><div class="bar-label"><span><i class="fa-solid fa-truck-medical text-amber-400"></i> Graves</span><span>${s.graves} (${total?((s.graves/total)*100).toFixed(0):0}%)</span></div><div class="bar-bg"><div class="bar-fill fill-grave" style="width: ${total?(s.graves/total)*100:0}%;"></div></div></div>
-            <div class="bar-item"><div class="bar-label"><span><i class="fa-solid fa-skull text-red-400"></i> Mortales</span><span>${s.mortales} (${total?((s.mortales/total)*100).toFixed(0):0}%)</span></div><div class="bar-bg"><div class="bar-fill fill-mortal" style="width: ${total?(s.mortales/total)*100:0}%;"></div></div></div>
-            <div class="bar-hint"><i class="fa-regular fa-chart-scatter"></i> Total incidentes: ${total}</div>`;
+            <div class="bar-item"><div class="bar-label"><span><i class="fa-regular fa-circle-check"></i> Leves</span><span>${s.leves} (${total?((s.leves/total)*100).toFixed(0):0}%)</span></div><div class="bar-bg"><div class="bar-fill fill-leve" style="width:${total?(s.leves/total)*100:0}%;"></div></div></div>
+            <div class="bar-item"><div class="bar-label"><span><i class="fa-solid fa-truck-medical"></i> Graves</span><span>${s.graves} (${total?((s.graves/total)*100).toFixed(0):0}%)</span></div><div class="bar-bg"><div class="bar-fill fill-grave" style="width:${total?(s.graves/total)*100:0}%;"></div></div></div>
+            <div class="bar-item"><div class="bar-label"><span><i class="fa-solid fa-skull"></i> Mortales</span><span>${s.mortales} (${total?((s.mortales/total)*100).toFixed(0):0}%)</span></div><div class="bar-bg"><div class="bar-fill fill-mortal" style="width:${total?(s.mortales/total)*100:0}%;"></div></div></div>
+            <div class="bar-hint">Total incidentes en Colombia: ${total}</div>`;
         const top = computeComunaStats();
-        let html = '';
-        if (top.length) {
-            top.forEach((c,idx) => {
-                const percent = (c.count / top[0].count) * 100;
-                html += `<div class="bar-item"><div class="bar-label"><span><span class="comuna-rank">#${idx+1}</span> ${c.name}</span><span>${c.count} incidentes</span></div><div class="bar-bg"><div class="bar-fill fill-comuna" style="width: ${percent}%;"></div></div></div>`;
-            });
-        } else html = '<div class="text-xs text-slate-400 text-center py-2">Sin datos aún</div>';
+        let html='';
+        if (top.length) top.forEach((c,i)=>{ const percent = (c.count/top[0].count)*100; html+=`<div class="bar-item"><div class="bar-label"><span>${i+1} ${c.name}</span><span>${c.count}</span></div><div class="bar-bg"><div class="bar-fill fill-comuna" style="width:${percent}%;"></div></div></div>`; });
+        else html='<div class="text-xs text-center py-2">Sin datos</div>';
         document.getElementById('comunaBarsContainer').innerHTML = html;
     }
-    
+
     function loadInitialIncidents() {
         const geo = <?php echo json_encode($geoJsonData); ?>;
         if (geo?.features) {
             allIncidents = [...geo.features];
             totalIncidentsCount = allIncidents.length;
-            let crit = 0;
-            allIncidents.forEach(inc => {
-                const g = (inc.properties.gravedad || '').toUpperCase();
-                if (g.includes('MUERTO') || g.includes('FATAL') || g.includes('DECESO') || g === 'MORTAL') crit++;
+            let crit=0;
+            allIncidents.forEach(inc=>{
+                const g=(inc.properties.gravedad||'').toUpperCase();
+                if (g.includes('MUERTO')||g.includes('FATAL')||g.includes('DECESO')) crit++;
                 addIncidentToMap(inc);
             });
-            criticalCount = crit;
-            document.getElementById('totalIncidentsLabel').innerHTML = totalIncidentsCount + ' registros';
-            document.getElementById('criticalIncidentsLabel').innerHTML = criticalCount + ' alertas activas';
+            criticalCount=crit;
+            document.getElementById('totalIncidentsLabel').innerHTML = totalIncidentsCount+' registros';
+            document.getElementById('criticalIncidentsLabel').innerHTML = criticalCount+' alertas';
             document.getElementById('footerTotalIncidents').innerHTML = totalIncidentsCount;
             document.getElementById('sCrit').innerHTML = criticalCount;
             updateBarStats();
-            updateHeatmap(); // Heatmap inicial
+            updateHeatmap();
         }
     }
-    
+
+    function zoomIn() { if(map) map.zoomIn(); }
+    function zoomOut() { if(map) map.zoomOut(); }
+
+    function locateUser() {
+        if (!navigator.geolocation) { alert("Geolocalización no soportada."); return; }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat=pos.coords.latitude, lng=pos.coords.longitude, acc=pos.coords.accuracy;
+                map.setView([lat,lng],15);
+                if (userMarker) map.removeLayer(userMarker);
+                if (userCircle) map.removeLayer(userCircle);
+                const userIcon = L.divIcon({ html:'<div style="background:#3b82f6; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>', iconSize:[16,16] });
+                userMarker = L.marker([lat,lng], { icon:userIcon }).addTo(map).bindPopup(`<strong>Tu ubicación</strong><br>Precisión: ±${Math.round(acc)} m`).openPopup();
+                userCircle = L.circle([lat,lng], { radius:acc, color:'#3b82f6', fillColor:'#3b82f6', fillOpacity:0.15, weight:1.5 }).addTo(map);
+            },
+            (err) => { alert("No se pudo obtener ubicación: "+err.message); },
+            { enableHighAccuracy:true, timeout:10000 }
+        );
+    }
+
     function refreshIncidentList() {
         const container = document.getElementById('incidentListContainer');
-        if (!allIncidents.length) { container.innerHTML = '<p class="text-center text-slate-400 py-6">No hay registros.</p>'; return; }
-        container.innerHTML = allIncidents.slice().reverse().map(i => {
-            const p = i.properties;
-            const gClass = p.gravedad.toLowerCase().includes('mortal') || p.gravedad.toLowerCase().includes('muerto') ? 'gravedad-mortal' : (p.gravedad.toLowerCase().includes('grave') ? 'gravedad-grave' : 'gravedad-leve');
-            return `<div class="incident-card"><div class="flex justify-between items-center mb-2"><span class="font-bold text-sm">${p.clase}</span><span class="gravedad-badge ${gClass}">${p.gravedad}</span></div><div class="text-xs text-slate-400 space-y-1"><div><i class="fa-solid fa-location-dot"></i> ${p.direccion} (${p.barrio})</div><div><i class="fa-solid fa-clock"></i> ${p.fecha} a las ${p.hora}</div></div><button class="btn-view-map" onclick="flyToIncident(${i.geometry.coordinates[1]}, ${i.geometry.coordinates[0]})"><i class="fa-solid fa-eye"></i> Enfocar mapa</button></div>`;
+        if (!allIncidents.length) { container.innerHTML = '<p class="text-center py-6">No hay registros.</p>'; return; }
+        container.innerHTML = allIncidents.slice().reverse().map(i=>{
+            const p=i.properties;
+            const gClass = p.gravedad.toLowerCase().includes('mortal')?'gravedad-mortal':(p.gravedad.toLowerCase().includes('grave')?'gravedad-grave':'gravedad-leve');
+            return `<div class="incident-card"><div class="flex justify-between"><span class="font-bold text-sm">${p.clase}</span><span class="gravedad-badge ${gClass}">${p.gravedad}</span></div><div class="text-xs text-slate-400 mt-1"><i class="fa-solid fa-location-dot"></i> ${p.direccion} (${p.barrio})<br><i class="fa-solid fa-clock"></i> ${p.fecha} ${p.hora}<br><i class="fa-solid fa-flag"></i> ${p.comuna}</div><button class="btn-view-map mt-2" onclick="flyToIncident(${i.geometry.coordinates[1]}, ${i.geometry.coordinates[0]})">Enfocar mapa</button></div>`;
         }).join('');
     }
-    
-    function flyToIncident(lat, lng) {
+
+    function flyToIncident(lat,lng) {
         document.getElementById('incidentModal').classList.remove('active');
-        isModalOpen = false;
-        map.flyTo([lat, lng], 17, { duration: 1.5 });
+        isModalOpen=false;
+        map.flyTo([lat,lng],17,{duration:1.5});
     }
-    
+
+    // -------------------- UI --------------------
     function setupUI() {
         document.getElementById('zoomInBtn').onclick = zoomIn;
         document.getElementById('zoomOutBtn').onclick = zoomOut;
         document.getElementById('btnGeolocate').onclick = locateUser;
-        document.getElementById('toggleHeatmapBtn').onclick = toggleHeatmap;
         document.getElementById('btnSafeRoute').onclick = () => {
-            if (selectingDestination) {
-                deactivateRouteSelection();
-                document.getElementById('routeUpdate').innerHTML = 'Selección cancelada';
-            } else {
-                activateRouteSelection();
-            }
+            if (selectingDestination) { deactivateRouteSelection(); document.getElementById('routeUpdate').innerHTML = 'Selección cancelada'; }
+            else activateRouteSelection();
         };
-        
-        document.getElementById('alertAllBtn').onclick = () => { 
-            mainClusterGroup.clearLayers(); 
-            allIncidents.forEach(i => addIncidentToMap(i));
-            updateHeatmap();
-        };
+        document.getElementById('toggleHeatmapBtn').onclick = toggleHeatmap;
+        document.getElementById('alertAllBtn').onclick = () => { mainClusterGroup.clearLayers(); allIncidents.forEach(i=>addIncidentToMap(i)); updateHeatmap(); };
         document.getElementById('alertDeathsBtn').onclick = () => {
             mainClusterGroup.clearLayers();
-            allIncidents.forEach(i => {
-                const g = (i.properties.gravedad || '').toUpperCase();
-                if (g.includes('MUERTO') || g.includes('FATAL') || g.includes('DECESO') || g === 'MORTAL') addIncidentToMap(i);
+            allIncidents.forEach(i=>{
+                const g=(i.properties.gravedad||'').toUpperCase();
+                if (g.includes('MUERTO')||g.includes('FATAL')||g.includes('DECESO')) addIncidentToMap(i);
             });
-            // No actualizamos heatmap aquí porque sigue mostrando todos los incidentes
-            // Podría mejorarse para filtrar también el heatmap, pero por ahora se mantiene completo
         };
-        
         const sb = document.getElementById('sidebar');
         document.getElementById('btnMenu').onclick = () => sb.classList.toggle('hidden');
         document.getElementById('closeSidebar').onclick = () => sb.classList.add('hidden');
         const modal = document.getElementById('incidentModal');
-        document.getElementById('btnListIncidents').onclick = () => { modal.classList.add('active'); isModalOpen = true; refreshIncidentList(); };
-        document.getElementById('closeModalBtn').onclick = () => { modal.classList.remove('active'); isModalOpen = false; };
+        document.getElementById('btnListIncidents').onclick = () => { modal.classList.add('active'); isModalOpen=true; refreshIncidentList(); };
+        document.getElementById('closeModalBtn').onclick = () => { modal.classList.remove('active'); isModalOpen=false; };
     }
-    
+
     window.onload = () => {
         initMap();
         loadInitialIncidents();
@@ -970,6 +767,14 @@ $faviconPath = '../../images/favico.png';
         setInterval(fetchSunriseSunset, 3600000);
         setupUI();
     };
+</script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/transicontrol/sw.js')
+            .then(reg => console.log('Service Worker registrado', reg))
+            .catch(err => console.error('Error al registrar SW', err));
+    }
 </script>
 </body>
 </html>

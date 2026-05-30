@@ -1,21 +1,16 @@
 <?php
-// login.php
+// app/views/auth/login.php
+require_once __DIR__ . '/../../../config/config.php';
+session_name(SESSION_NAME);
 session_start();
-// Definir APP_URL (ajústala según tu entorno)
-if (!defined('APP_URL')) {
-    define('APP_URL', 'http://localhost:8000'); // Cambia por tu dominio
-}
-// Redirigir si ya está logueado
+
 if (isset($_SESSION['user_id'])) {
     header('Location: ' . APP_URL . '/dashboard');
     exit();
 }
 
-// --- CONFIGURACIÓN DE GOOGLE ---
-// Colocar el Client ID real obtenido de Google Cloud Console
-$google_client_id = 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com'; // ¡REEMPLAZA!
-
-// Si no está configurado, se deshabilitará el botón
+// Google Client ID - REEMPLAZA POR EL TUYO
+$google_client_id = 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com';
 $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com');
 ?>
 <!DOCTYPE html>
@@ -24,7 +19,7 @@ $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleu
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransiControl · Acceso seguro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/login.css">
     <script>
@@ -39,15 +34,7 @@ $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleu
     <div class="header-container">
         <a href="<?= APP_URL ?>/" class="logo-link">
             <i class="fas fa-traffic-light"></i>
-<<<<<<< HEAD
             <span>Transi<span>Control</span></span>
-=======
-<<<<<<< HEAD
-            <span>Transi<span>Control</span></span> 
-=======
-            <span>Transi<span>Control</span></span>
->>>>>>> de973c3c64ca69fbfc8cc06d37143c6990d9aafb
->>>>>>> 6234cab8e71b79bb5937e534df305a343dee8dad
         </a>
         <a href="<?= APP_URL ?>/" class="back-link">
             <i class="fas fa-arrow-left"></i> Regresar
@@ -81,7 +68,7 @@ $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleu
 
                 <div id="messageBox" class="msg-box" style="display: none;"></div>
 
-                <!-- LOGIN -->
+                <!-- Login -->
                 <div id="loginForm" class="form-panel active">
                     <div class="input-group">
                         <i class="fas fa-envelope"></i>
@@ -102,24 +89,16 @@ $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleu
                         <span>Acceder al sistema</span>
                         <div class="spinner" style="display:none"></div>
                     </button>
-
-                    <!-- Separador -->
-                    <div class="divider">
-                        <span>O continúa con</span>
-                    </div>
-
-                    <!-- Botón de Google -->
+                    <div class="divider"><span>O continúa con</span></div>
                     <button type="button" class="btn-google-custom" id="googleSignInBtn" <?= !$google_configured ? 'disabled' : '' ?>>
-                        <i class="fab fa-google"></i> 
-                        <?= $google_configured ? 'Continuar con Google' : 'Google no configurado' ?>
+                        <i class="fab fa-google"></i> <?= $google_configured ? 'Continuar con Google' : 'Google no configurado' ?>
                     </button>
-
                     <button type="button" class="btn-demo" onclick="demoLogin()">
                         <i class="fas fa-flask"></i> Modo demostración
                     </button>
                 </div>
 
-                <!-- REGISTRO -->
+                <!-- Registro -->
                 <div id="registerForm" class="form-panel">
                     <div class="input-group">
                         <i class="fas fa-user"></i>
@@ -155,7 +134,7 @@ $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleu
                     </button>
                 </div>
 
-                <!-- RECUPERACIÓN -->
+                <!-- Recuperación -->
                 <div id="forgotPasswordForm" class="form-panel">
                     <p class="info-text">Ingresa tu correo y te enviaremos instrucciones para restablecer tu contraseña.</p>
                     <div class="input-group">
@@ -189,9 +168,9 @@ $google_configured = ($google_client_id !== 'TU_CLIENT_ID_DE_GOOGLE.apps.googleu
         <div class="footer-section">
             <h3>Síguenos</h3>
             <div class="social-links">
-                <a href="#" target="_blank"><i class="fab fa-instagram"></i></a>
-                <a href="#" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                <a href="#" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-whatsapp"></i></a>
             </div>
         </div>
     </div>

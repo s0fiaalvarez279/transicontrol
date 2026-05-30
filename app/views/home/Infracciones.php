@@ -339,6 +339,8 @@ $faviconPath = '../../images/favico.png';
             <a href="Infracciones.php" class="active"><i class="fa-solid fa-file-lines"></i> Infracciones</a>
             <a href="Agentes.php"><i class="fa-solid fa-shield-halved"></i> Agentes</a>
             <a href="Abogados.php"><i class="fa-solid fa-gavel"></i> Abogados</a>
+            <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+            <script src="https://files.bpcontent.cloud/2026/05/27/17/20260527172542-3Z3UA6G3.js" defer></script>
         </nav>
     </div>
     
